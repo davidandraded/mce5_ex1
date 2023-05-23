@@ -50,7 +50,7 @@ En el estudio realizado por <a href="https://doi.org/10.1111/jvs.13185">Sanches 
 
 **Respuesta:**
 
-Todas las plantas tienen la misma necesidad de recursos. Si las especies recibieran por igual la cantidad de recursos, no existiria competencia y por ende no se perdera la diversidad. Si las especies recibieran por desigual la cantidad de recursos, existiria competencia y por ende se perdera la diversidad.
+Todas las plantas tienen la misma necesidad de recursos dependiendo su ubicacion. Si las especies recibieran por igual la cantidad de recursos, no existiria competencia y por ende no se perdera la diversidad. Si las especies recibieran por desigual la cantidad de recursos, existiria competencia y por ende se perdera la diversidad.
 
 ## Muestra
 
@@ -107,16 +107,140 @@ En este graficos podemos ver la ubicacion de las especies que tenemos como muest
 
 En esta parte debe aplicar las regresiones lineal, linearizada y generalizada sobre la presencia de ácaros en musgos. Una de las especies analizadas es *Galumma sp.* cuya abundancia presencia y proporción es posiblemente afectada por las siguiente cinco variables ambientales como densidad de sustrato, el tipo de sustrato, el contenido de agua, si se tiene o no arbustos en la cercanía y la topografía del suelo. Utilice la data `mites.csv` y responda los siguientes items.
 
--   ¿Cuál es el efecto de las variables ambientales en la i) abundancia de ii) abundancia y iii) proporción de la especie *Galumma sp.*?
+ ¿Cuál es el efecto de las variables ambientales en la i) abundancia de ii) abundancia y iii) proporción de la especie *Galumma sp.*?
 
 Para responder esta pregunta debe generar las hipótesis y probar las hipótesis (código y explicación), asimismo visualizar con etiquetas adecuadas. Considere realizar lo siguiente:
 
 -   Realizar un análisis exploratorio.
 
+```{r acaros}
+library(readr)
+mites <- read_csv("mites.csv")
+View(mites)
+str(mites)
+attach(mites)
+```
+
+```{r acaross}
+summary(mites)
+```
+
+```{r plot1}
+library(ggplot2)
+ggplot(data = mites, aes(x = AbundanceGalumma, y = WaterContent, 
+                          col = Ocurrence)) +
+  geom_point()
+library(ggplot2)
+ggplot(data = mites, aes(x = AbundanceGalumma, y = SubstrateDensity, 
+                          col = Ocurrence)) +
+  geom_point()
+```
+
+En la figura se muestra que a medida que hay abundacia la contención de agua en los sustratos disminuye en los musgos. 
+
 -   Realizar regresiones lineales de cada variable de respuesta y variables efectoras, univariable o multivariable. Verifique los supuestos de la regresión.
+
+$H_{01}$: El incremneto de la abundancia de galuma no produce un efecto en la contención de agua en los musgos y en la densidad de los substratos 
+$H_{02}$: El incremento de la abundancia de galuma tieneun efecto en la contención de agua en los musgos y en la densidad de los substratos. 
+
+
+Como se pudo ver en los gráfios la contención de agua y de la densidad de los substratos en los musgos se ve afectado por la abundancia de los acaros, Por lo que para la regresión linea se plantea lo siguiente: 
+
+$$
+wc = \beta_0 + \beta_1 \cdot  Abundance Galuma + \epsilon_0
+$$
+```{r rem_acaros}
+lm1 = lm(AbundanceGalumma ~WaterContent, data = mites)
+summary(lm1)
+ggplot(mites, aes(x=AbundanceGalumma, y = WaterContent)) + 
+  geom_point() +
+  geom_smooth(method="lm") + theme_classic()
+```
+
+$\beta_0 = -0.36132$ Cuando no hay abundancia en galuma el wc es de 0.23 horas. Esto no se cumple en la realidad; además el p-valor no es significativo.
+
+$\beta_1=0.21531$ Por cada incrementa la ocurrencia de galuma, la contención de agua en wc incrementa en 0.23 horas. 
+
+El modelo final es : 
+
+$$
+rem = 0.2359 \cdot  Abundance Galuma + \epsilon
+$$
+#Verificación de los Supuestos 
+## i. Media de errores es nula
+
+```{r c1errorcero}
+cond1 = sum(lm1$residuals)
+cond1
+```
+## ii. Linearidad
+
+```{r c2linear}
+plot(lm1, 1)
+```
+
+La figura muestra que los valores tienen una distribuciín aleatoria, y la recta es muy cerca al cero.
+
+## iii. Normalidad de los residuales
+
+```{r c3normal}
+hist(lm1$residuals)
+```
+
+La figura muestra que se tiene uns sesgo hacia la izquierda de los residuales.
+
+```{r c3normal2}
+plot(lm1, 2)
+```
+
+Aunque el histograma dice que aparenetemente no es normal, el q-q plot indica que solamente algunos puntos afectan a esa normalidad (1, 34, 14) en si nuestros valores atipicos.
+
+$H_0: $ la distribución es normal ($CI:95%, p>0.05$)
+
+```{r c3normal3}
+shapiro.test(lm1$residuals)
+```
+
+Con un 95% de confianza el valor $p=0.01$ indica que no se cumple la condición de normalidad. Por lo tanto se debe extraer los valores atípicos. 
+## iv. Independencia de medidas
+
+```{r c4independencia}
+plot(lm1, 4)
+abline(h=4/(length(lm1$residuals)-2-1), col="red")
+```
+
+La gráfica nos indica que con certeza las medidas 1, 14 y 67 son valores atípicos.
+
+
+```{r c3cooksdist}
+k = 2  # numero de variables
+N = length(lm1$residuals)  #número de observaciones
+umbral_cookd = 4/(N-k-1)
+umbral_cookd
+sort(cooks.distance(lm1), decreasing = TRUE)
+```
+
+En base a la gráfica de distancias de Cook a la anterior fihura y la verificación con la tabla de distancias de Cook se verifica que las medidas 1, 14, 34 y 67.
+
+## v. Homogeneidad de varianzas (Homocedasticidad)
+```{r c5varkte}
+plot(lm1, 3)
+```
+
+Las medidas 1, 14 y 34 tienen alta influencia por lo que se tiene una tendencia en la curva de la raíz.
+
 
 -   Realizar regresiones linearizadas de cada variable de respuesta y variables efectoras, univariable o multivariable.
 
--   Realizar regresiones lineales generalizadas de cada variable de respuesta y variables efectoras, univariable o multivariable.
+## Linearización
 
--   Comparar de la bondad de las regresiones.
+```{r logacaros}
+ggplot(mites, aes(x=AbundanceGalumma, y = WaterContent)) + 
+  geom_point() +
+  geom_smooth(method="lm") + theme_classic()
+```
+
+Luego de que se observa que algunos puntos están muy alejados de la recta y que la recta no se ajusta a la mayoría de puntos por lo cuál tiene un comportamiento "extraño". 
+
+Para corregir se recurre a las transformaciones, también denominadas "linearización"
+
